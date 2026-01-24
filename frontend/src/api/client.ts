@@ -7,9 +7,13 @@ import { useAuthStore } from '../store/authStore';
 // If not, and we are in production (or Vercel), we expect /api relative path to be handled by rewrite.
 // If local dev, we default to localhost:8000.
 const getBaseUrl = () => {
-    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-    if (import.meta.env.PROD) return `${window.location.origin}/api`;
-    return 'http://localhost:8000';
+    let url = 'http://localhost:8000';
+    if (import.meta.env.VITE_API_URL) {
+        url = import.meta.env.VITE_API_URL;
+    } else if (import.meta.env.PROD) {
+        url = `${window.location.origin}/api`;
+    }
+    return url.replace(/\/$/, '');
 };
 
 export const BASE_URL = getBaseUrl();
