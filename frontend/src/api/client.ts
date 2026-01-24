@@ -2,7 +2,17 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Determine correct BASE_URL
+// If VITE_API_URL is set, use it.
+// If not, and we are in production (or Vercel), we expect /api relative path to be handled by rewrite.
+// If local dev, we default to localhost:8000.
+const getBaseUrl = () => {
+    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+    if (import.meta.env.PROD) return `${window.location.origin}/api`;
+    return 'http://localhost:8000';
+};
+
+export const BASE_URL = getBaseUrl();
 
 export const api = axios.create({
     baseURL: BASE_URL,
