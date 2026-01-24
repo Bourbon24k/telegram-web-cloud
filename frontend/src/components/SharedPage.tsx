@@ -3,7 +3,7 @@ import { filesApi } from '../api/client';
 import { File, Folder, Download, AlertCircle, Loader2, ImageIcon, Video } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useUIStore } from '../store/uiStore';
-import { Toaster, toast } from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 
 interface SharedFileMeta {
     id: number;
