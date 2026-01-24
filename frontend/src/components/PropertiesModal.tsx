@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { X, File, Folder, Calendar, HardDrive, MapPin, Link, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, File, Folder, Calendar, HardDrive, MapPin, Link } from 'lucide-react';
 import { filesApi } from '../api/client';
 import { useFileStore } from '../store/fileStore';
 import toast from 'react-hot-toast';

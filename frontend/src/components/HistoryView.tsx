@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { Upload, Download, Trash2, Edit2, Move, Share2, Clock } from 'lucide-react';
 import { useFileStore } from '../store/fileStore';
 

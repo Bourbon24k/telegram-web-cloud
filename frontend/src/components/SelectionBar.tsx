@@ -1,13 +1,12 @@
 
-import React, { useState } from 'react';
-import { X, Trash2, Move, Loader2, CheckSquare } from 'lucide-react';
+import { useState } from 'react';
+import { X, Trash2, Loader2 } from 'lucide-react';
 import { useFileStore } from '../store/fileStore';
 import { filesApi } from '../api/client';
 import toast from 'react-hot-toast';
-import { cn } from '../lib/utils'; // Assuming cn exists
 
 export const SelectionBar = ({ onRefresh }: { onRefresh: () => void }) => {
-    const { selectedFileIds, clearSelection, openModal } = useFileStore();
+    const { selectedFileIds, clearSelection } = useFileStore();
     const [loading, setLoading] = useState(false);
 
     if (selectedFileIds.length === 0) return null;
@@ -27,19 +26,6 @@ export const SelectionBar = ({ onRefresh }: { onRefresh: () => void }) => {
                 setLoading(false);
             }
         }
-    };
-
-    const handleMove = () => {
-        // We need to modify MoveModal to handle multiple files or create a new BatchMoveModal
-        // For now, let's just show a toast that it's coming or handle it if easy.
-        // Actually MoveModal uses activeModal='move' and modalFile.
-        // We need to update store to support batch move.
-        // Let's defer batch move or Hack it: open modal with null file, and Modify MoveModal to check selectedFileIds if modalFile is null.
-
-        // Let's set the first file as "modalFile" just to trigger the modal, 
-        // but MoveModal needs to know it's a batch op.
-        // Better: Update store to have 'batch-move' modal type or similar.
-        alert("Групповое перемещение скоро будет доступно");
     };
 
     return (

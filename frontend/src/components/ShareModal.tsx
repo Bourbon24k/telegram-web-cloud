@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Copy, Check, Link, ExternalLink } from 'lucide-react';
 import { filesApi } from '../api/client';
 import { useFileStore } from '../store/fileStore';

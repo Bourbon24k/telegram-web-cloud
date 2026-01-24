@@ -11,7 +11,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
     return (
         <div className={cn("min-h-screen flex text-gray-900 dark:text-gray-100 font-sans", isDarkMode ? "dark" : "")}>
-            <Sidebar />
+            <Sidebar onRefresh={() => { }} />
             <div className="flex-1 flex flex-col bg-[#f7f7f7] dark:bg-dark-bg transition-colors duration-200">
                 <Header />
                 <main className="flex-1 p-6 overflow-y-auto">

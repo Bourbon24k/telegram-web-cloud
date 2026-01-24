@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { X, Folder, ChevronRight, Home, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Folder, Home, Loader2 } from 'lucide-react';
 import { filesApi } from '../api/client';
 import { useFileStore } from '../store/fileStore';
 import { cn } from '../lib/utils';

@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { Search, Moon, Sun, LayoutGrid, List as ListIcon, User, ArrowLeft, Menu } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useAuthStore } from '../store/authStore';

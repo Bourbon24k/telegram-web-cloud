@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Folder, File, ImageIcon, Video, FileText } from 'lucide-react';
+import { Folder, File, ImageIcon, Video } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useFileStore } from '../store/fileStore';
 import { FileContextMenu } from './FileContextMenu';
