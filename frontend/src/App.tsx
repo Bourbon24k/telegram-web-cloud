@@ -21,7 +21,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { SharedPage } from './components/SharedPage';
 
 function App() {
-  if (window.location.pathname.startsWith('/s/')) {
+  if (window.location.pathname.startsWith('/s/') || window.location.hash.startsWith('#/s/')) {
     return <SharedPage />;
   }
 

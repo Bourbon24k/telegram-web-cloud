@@ -553,20 +553,28 @@ async def download_shared_file(
         raise HTTPException(status_code=404, detail="No file data found")
 
     async def file_generator():
-        for chunk in chunks:
-            try:
-                if chunk.telegram_file_id:
-                    file_info = await bot.get_file(chunk.telegram_file_id)
-                    file_content_io = await bot.download_file(file_info.file_path)
-                    encrypted_data = file_content_io.read()
-                    
-                    try:
-                        decrypted_data = decrypt_chunk(encrypted_data)
-                        yield decrypted_data
-                    except Exception as e:
-                        print(f"Decryption failed: {e}")
-            except Exception as e:
-                print(f"Error downloading chunk: {e}")
+        from aiogram import Bot
+        from settings import BOT_TOKEN
+        temp_bot = Bot(token=BOT_TOKEN)
+        try:
+            for chunk in chunks:
+                try:
+                    if chunk.telegram_file_id:
+                        file_info = await temp_bot.get_file(chunk.telegram_file_id)
+                        file_content_io = await temp_bot.download_file(file_info.file_path)
+                        encrypted_data = file_content_io.read()
+                        
+                        try:
+                            decrypted_data = decrypt_chunk(encrypted_data)
+                            yield decrypted_data
+                        except Exception as e:
+                            print(f"Decryption failed: {e}")
+                except Exception as e:
+                    print(f"Error downloading chunk: {e}")
+        except Exception as e:
+            print(f"Shared download error: {e}")
+        finally:
+            await temp_bot.session.close()
 
     return StreamingResponse(
         file_generator(), 
@@ -681,69 +689,86 @@ def get_file_info(
 @router.get("/{file_id}/download")
 async def download_file(
     file_id: int, 
-    token: str, # passed as query param for direct download links
+    token: str,
     db: Session = Depends(get_db)
 ):
-    # Manual token validation for download links (browser doesn't send headers for simple GET links generally unless using fetch, but we open in new tab)
-    # Ideally we'd use a short-lived download token, but for now we reuse access token or specific logic.
-    # To keep it simple: Validate token -> get user -> check owner
-    from utils.security import verify_token
-    tg_id = verify_token(token)
-    if not tg_id:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    user = db.query(User).filter(User.phone_number == tg_id).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-
-    file_meta = db.query(FileMetadata).filter(
-        FileMetadata.id == file_id,
-        FileMetadata.owner_id == user.id
-    ).first()
-    
-    if not file_meta:
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    # Update accessed_at for recent files
-    file_meta.accessed_at = datetime.utcnow()
-    db.commit()
-    
-    # Log history
-    history = FileHistory(
-        user_id=user.id,
-        file_id=file_id,
-        action="download",
-        file_name=file_meta.name
-    )
-    db.add(history)
-    db.commit()
+    try:
+        from utils.security import verify_token
+        from aiogram import Bot
+        from settings import BOT_TOKEN
         
-    chunks = db.query(FileChunk).filter(FileChunk.file_id == file_id).order_by(FileChunk.chunk_order).all()
-    
-    if not chunks:
-         raise HTTPException(status_code=404, detail="No chunks found")
+        # print(f"Verifying token: {token[:10]}...") 
+        tg_id = verify_token(token)
+        if not tg_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
 
-    async def file_generator():
-        for chunk in chunks:
+        user = db.query(User).filter(User.phone_number == tg_id).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        file_meta = db.query(FileMetadata).filter(
+            FileMetadata.id == file_id,
+            FileMetadata.owner_id == user.id
+        ).first()
+        
+        if not file_meta:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        # Log history
+        try:
+             # Update accessed_at for recent files
+            file_meta.accessed_at = datetime.utcnow()
+            history = FileHistory(
+                user_id=user.id,
+                file_id=file_id,
+                action="download",
+                file_name=file_meta.name
+            )
+            db.add(history)
+            db.commit()
+        except:
+            db.rollback() 
+            # Non-critical
+
+        chunks = db.query(FileChunk).filter(FileChunk.file_id == file_id).order_by(FileChunk.chunk_order).all()
+        
+        if not chunks:
+             raise HTTPException(status_code=404, detail="No chunks found")
+
+        async def file_generator():
+            # Create a fresh bot instance to avoid session loop mismatch in Vercel
+            temp_bot = Bot(token=BOT_TOKEN)
             try:
-                if chunk.telegram_file_id:
-                    file_info = await bot.get_file(chunk.telegram_file_id)
-                    file_content_io = await bot.download_file(file_info.file_path)
-                    encrypted_data = file_content_io.read()
-                    
+                for chunk in chunks:
                     try:
-                        decrypted_data = decrypt_chunk(encrypted_data)
-                        yield decrypted_data
+                        if chunk.telegram_file_id:
+                            file_info = await temp_bot.get_file(chunk.telegram_file_id)
+                            file_content_io = await temp_bot.download_file(file_info.file_path)
+                            encrypted_data = file_content_io.read()
+                            
+                            try:
+                                decrypted_data = decrypt_chunk(encrypted_data)
+                                yield decrypted_data
+                            except Exception as e:
+                                print(f"Decryption failed: {e}")
                     except Exception as e:
-                        print(f"Decryption failed: {e}")
+                        print(f"Error downloading chunk: {e}")
             except Exception as e:
-                print(f"Error downloading chunk: {e}")
+                 print(f"Generator critical error: {e}")
+            finally:
+                await temp_bot.session.close()
 
-    return StreamingResponse(
-        file_generator(), 
-        media_type=file_meta.mime_type or "application/octet-stream",
-        headers={"Content-Disposition": f"attachment; filename={file_meta.name}"}
-    )
+        return StreamingResponse(
+            file_generator(), 
+            media_type=file_meta.mime_type or "application/octet-stream",
+            headers={"Content-Disposition": f"attachment; filename={file_meta.name}"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Download Error: {str(e)}")
 
 @router.get("/{folder_id}/download_folder")
 async def download_folder(
@@ -817,36 +842,45 @@ async def download_folder(
     import os
     
     async def zip_generator():
-        with tempfile.TemporaryFile() as tmp:
-            with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
-                for path, meta in files_to_zip:
-                    # Download file content
-                    chunks = db.query(FileChunk).filter(FileChunk.file_id == meta.id).order_by(FileChunk.chunk_order).all()
-                    file_bytes = b""
-                    for chunk in chunks:
-                         if chunk.telegram_file_id:
-                             try:
-                                file_info = await bot.get_file(chunk.telegram_file_id)
-                                file_content_io = await bot.download_file(file_info.file_path)
-                                encrypted_data = file_content_io.read()
-                                file_bytes += decrypt_chunk(encrypted_data)
-                             except:
-                                 pass
-                    
-                    # Write to zip
-                    # Timestamp fix
-                    zinfo = zipfile.ZipInfo(path)
-                    zinfo.date_time = datetime.now().timetuple()[:6]
-                    zinfo.compress_type = zipfile.ZIP_DEFLATED
-                    zf.writestr(zinfo, file_bytes)
-            
-            # Reset pointer
-            tmp.seek(0)
-            while True:
-                chunk = tmp.read(8192)
-                if not chunk:
-                    break
-                yield chunk
+        from aiogram import Bot
+        from settings import BOT_TOKEN
+        temp_bot = Bot(token=BOT_TOKEN)
+        try:
+            with tempfile.TemporaryFile() as tmp:
+                with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for path, meta in files_to_zip:
+                        # Download file content
+                        chunks = db.query(FileChunk).filter(FileChunk.file_id == meta.id).order_by(FileChunk.chunk_order).all()
+                        file_bytes = b""
+                        for chunk in chunks:
+                             if chunk.telegram_file_id:
+                                 try:
+                                    file_info = await temp_bot.get_file(chunk.telegram_file_id)
+                                    file_content_io = await temp_bot.download_file(file_info.file_path)
+                                    encrypted_data = file_content_io.read()
+                                    file_bytes += decrypt_chunk(encrypted_data)
+                                 except Exception as e:
+                                     print(f"Error downloading/decrypting chunk in folder: {e}")
+                                     pass
+                        
+                        # Write to zip
+                        # Timestamp fix
+                        zinfo = zipfile.ZipInfo(path)
+                        zinfo.date_time = datetime.now().timetuple()[:6]
+                        zinfo.compress_type = zipfile.ZIP_DEFLATED
+                        zf.writestr(zinfo, file_bytes)
+                
+                # Reset pointer
+                tmp.seek(0)
+                while True:
+                    chunk = tmp.read(8192)
+                    if not chunk:
+                        break
+                    yield chunk
+        except Exception as e:
+            print(f"Folder download error: {e}")
+        finally:
+            await temp_bot.session.close()
 
     # This is still memory intensive as it buffers "file_bytes" in RAM before zipping.
     # But for a "cloud test" it's likely acceptable.

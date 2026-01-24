@@ -22,12 +22,18 @@ export const SharedPage = () => {
     const { isDarkMode } = useUIStore();
 
     useEffect(() => {
-        // Extract token from URL: /s/{token}
+        // Extract token from Hash (#/s/token) or Path (/s/token)
+        let token = '';
+        const hash = window.location.hash;
         const path = window.location.pathname;
-        const parts = path.split('/');
-        const tokenIndex = parts.indexOf('s');
-        if (tokenIndex !== -1 && parts[tokenIndex + 1]) {
-            const token = parts[tokenIndex + 1];
+
+        if (hash.startsWith('#/s/')) {
+            token = hash.split('/s/')[1];
+        } else if (path.startsWith('/s/')) {
+            token = path.split('/s/')[1];
+        }
+
+        if (token) {
             loadInfo(token);
         } else {
             setError('Неверная ссылка');
@@ -49,13 +55,20 @@ export const SharedPage = () => {
 
     const handleDownload = () => {
         if (!file) return;
-        // Extract token again or store it?
-        // Actually we can reconstruct or simple use the logic from loadInfo
-        const path = window.location.pathname;
-        const parts = path.split('/');
-        const token = parts[parts.indexOf('s') + 1];
 
-        window.location.href = filesApi.getSharedDownloadLink(token);
+        let token = '';
+        const hash = window.location.hash;
+        const path = window.location.pathname;
+
+        if (hash.startsWith('#/s/')) {
+            token = hash.split('/s/')[1];
+        } else if (path.startsWith('/s/')) {
+            token = path.split('/s/')[1];
+        }
+
+        if (token) {
+            window.location.href = filesApi.getSharedDownloadLink(token);
+        }
     };
 
     const formatSize = (bytes: number) => {
