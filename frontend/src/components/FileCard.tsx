@@ -9,13 +9,13 @@ import { filesApi } from '../api/client';
 import { triggerUpload } from './UploadManager';
 
 const getIcon = (mime: string, isFolder: boolean) => {
-    if (isFolder) return <Folder className="text-brand w-16 h-16 drop-shadow-sm" fill="#fc0" stroke="#eda000" />;
+    if (isFolder) return <Folder className="text-brand w-16 h-16 drop-shadow-sm" fill="#8b5cf6" stroke="#7c3aed" />;
     if (mime?.startsWith('image')) return <ImageIcon className="text-purple-500 w-12 h-12" />;
     if (mime?.startsWith('video')) return <Video className="text-red-500 w-12 h-12" />;
     return <File className="text-blue-400 w-12 h-12" />;
 };
 
-export const FileCard = ({ file, onRefresh }: { file: any, onRefresh: () => void }) => {
+export const FileCard = ({ file, onRefresh, viewMode = 'grid' }: { file: any, onRefresh: () => void, viewMode?: 'grid' | 'list' }) => {
     const { selectedFileIds, toggleSelection, setCurrentFolder, openModal } = useFileStore();
     const isSelected = selectedFileIds.includes(file.id);
 
@@ -108,6 +108,58 @@ export const FileCard = ({ file, onRefresh }: { file: any, onRefresh: () => void
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     };
+
+    if (viewMode === 'list') {
+        const listIcon = file.is_folder
+            ? <Folder className="text-brand w-8 h-8 flex-shrink-0" fill="#8b5cf6" stroke="#7c3aed" />
+            : (file.mime_type?.startsWith('image')
+                ? <ImageIcon className="text-purple-500 w-8 h-8 flex-shrink-0" />
+                : <File className="text-blue-400 w-8 h-8 flex-shrink-0" />);
+
+        return (
+            <FileContextMenu onAction={handleAction}>
+                <motion.div
+                    layout
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={(e) => {
+                        if (e.metaKey || e.ctrlKey) {
+                            toggleSelection(file.id, true);
+                        } else {
+                            toggleSelection(file.id, false);
+                        }
+                    }}
+                    onDoubleClick={() => {
+                        if (file.is_folder) setCurrentFolder(file.id);
+                        else openModal('preview', file);
+                    }}
+                    draggable
+                    onDragStart={(e: any) => {
+                        if (e.dataTransfer) {
+                            e.dataTransfer.setData('sourceId', file.id.toString());
+                            e.dataTransfer.effectAllowed = 'move';
+                        }
+                    }}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={cn(
+                        "group relative bg-white dark:bg-dark-surface p-3 rounded-xl transition-all cursor-pointer flex items-center gap-4 select-none border border-transparent hover:border-gray-100 dark:hover:border-white/5",
+                        isSelected ? "ring-2 ring-brand shadow-md bg-yellow-50 dark:bg-white/5" : "shadow-sm",
+                        isDragOver && "ring-2 ring-brand bg-blue-50 dark:bg-blue-500/20 z-10"
+                    )}
+                >
+                    <div className="flex-shrink-0">{listIcon}</div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{file.name}</p>
+                    </div>
+                    <div className="text-xs text-gray-400 w-24 text-right flex-shrink-0">
+                        {file.is_folder ? 'Папка' : formatSize(file.size)}
+                    </div>
+                </motion.div>
+            </FileContextMenu>
+        );
+    }
 
     return (
         <FileContextMenu onAction={handleAction}>

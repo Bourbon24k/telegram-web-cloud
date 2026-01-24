@@ -18,11 +18,16 @@ import { Cloud, Loader2 } from 'lucide-react';
 import { cn } from './lib/utils';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
+import { SharedPage } from './components/SharedPage';
 
 function App() {
+  if (window.location.pathname.startsWith('/s/')) {
+    return <SharedPage />;
+  }
+
   const { isAuthenticated, login } = useAuthStore();
   const { files, setFiles, currentFolderId, searchQuery, currentView } = useFileStore();
-  const { isDarkMode, isSidebarOpen, closeSidebar } = useUIStore();
+  const { isDarkMode, isSidebarOpen, closeSidebar, viewMode } = useUIStore();
 
   const [tgId, setTgId] = useState('');
   const [code, setCode] = useState('');
@@ -168,9 +173,12 @@ function App() {
     }
 
     return (
-      <div className="grid grid-cols-auto-fit-150 gap-3 md:gap-4 pb-20">
+      <div className={cn(
+        "gap-3 md:gap-4 pb-20",
+        viewMode === 'list' ? "flex flex-col" : "grid grid-cols-auto-fit-150"
+      )}>
         {filteredFiles.map((f: any) => (
-          <FileCard key={f.id} file={f} onRefresh={loadFiles} />
+          <FileCard key={f.id} file={f} onRefresh={loadFiles} viewMode={viewMode} />
         ))}
       </div>
     );

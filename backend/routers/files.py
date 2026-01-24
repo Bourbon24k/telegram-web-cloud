@@ -13,6 +13,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from utils.encryption import encrypt_chunk, decrypt_chunk
 from routers.auth import get_current_user, get_db
+from utils.security import verify_token
 import asyncio
 import zipfile
 from aiogram.exceptions import TelegramRetryAfter
@@ -573,6 +574,29 @@ async def download_shared_file(
         headers={"Content-Disposition": f"attachment; filename={file_meta.name}"}
     )
 
+
+@router.get("/shared/{share_token}/info")
+def get_shared_file_info(
+    share_token: str,
+    db: Session = Depends(get_db)
+):
+    """Get metadata for a shared file"""
+    file_meta = db.query(FileMetadata).filter(
+        FileMetadata.share_token == share_token
+    ).first()
+    
+    if not file_meta:
+        raise HTTPException(status_code=404, detail="Shared file not found")
+        
+    return {
+        "id": file_meta.id,
+        "name": file_meta.name,
+        "size": file_meta.size,
+        "mime_type": file_meta.mime_type,
+        "is_folder": file_meta.is_folder,
+        "created_at": file_meta.created_at.isoformat() if file_meta.created_at else None,
+        "download_url": f"/files/shared/{share_token}"
+    }
 
 @router.put("/{file_id}/move")
 def move_file(

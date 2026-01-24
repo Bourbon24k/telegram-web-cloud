@@ -243,15 +243,26 @@ export const UploadManager = () => {
                                             <div className="flex justify-between items-center mb-0.5">
                                                 <span className="text-sm font-medium truncate dark:text-gray-200 block w-full">{task.file.name}</span>
                                             </div>
-                                            <div className="flex justify-between text-[10px] text-gray-400 mb-1 font-mono">
+                                            <div className="flex justify-between text-[11px] text-gray-400 mb-1 font-mono tracking-tight">
                                                 <span>
-                                                    {task.status === 'uploading' && task.speed ? `${task.speed} · ETA: ${task.eta}` :
-                                                        task.status === 'completed' ? 'Завершено' :
-                                                            task.status === 'error' ? 'Ошибка' : 'Ожидание...'}
+                                                    {task.status === 'uploading' ? (
+                                                        <>
+                                                            {formatSizeBytes(task.uploadedBytes)} / {formatSizeBytes(task.totalBytes)}
+                                                            {task.speed && ` · ${task.speed}`}
+                                                            {task.eta && ` · ${task.eta}`}
+                                                        </>
+                                                    ) : task.status === 'completed' ? (
+                                                        formatSizeBytes(task.file.size)
+                                                    ) : (
+                                                        task.status === 'error' ? 'Ошибка' : 'Ожидание...'
+                                                    )}
                                                 </span>
-                                                <span>{task.progress}%</span>
+                                                <span className={cn(
+                                                    "font-bold",
+                                                    task.status === 'completed' ? "text-green-500" : "text-brand"
+                                                )}>{task.progress}%</span>
                                             </div>
-                                            <div className="h-1 bg-gray-100 dark:bg-[#333] rounded-full overflow-hidden">
+                                            <div className="h-1.5 bg-gray-100 dark:bg-[#333] rounded-full overflow-hidden">
                                                 <div
                                                     className={cn("h-full transition-all duration-300 ease-out",
                                                         task.status === 'error' ? 'bg-red-500' :
@@ -273,6 +284,14 @@ export const UploadManager = () => {
             )}
         </>
     );
+};
+
+const formatSizeBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
 export const triggerUpload = (files: File[], targetFolderId?: number | null) => {

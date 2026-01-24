@@ -52,7 +52,7 @@ export const Header = () => {
                         className={cn(
                             "p-2 rounded-lg transition-all",
                             viewMode === 'grid'
-                                ? "bg-brand text-black shadow-sm"
+                                ? "bg-brand text-white shadow-sm"
                                 : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
                         )}
                     >
@@ -63,7 +63,7 @@ export const Header = () => {
                         className={cn(
                             "p-2 rounded-lg transition-all",
                             viewMode === 'list'
-                                ? "bg-brand text-black shadow-sm"
+                                ? "bg-brand text-white shadow-sm"
                                 : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
                         )}
                     >

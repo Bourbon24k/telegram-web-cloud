@@ -106,10 +106,10 @@ export const Sidebar = ({ onRefresh }: { onRefresh: () => void }) => {
                         sideOffset={8}
                         align="start"
                     >
-                        <DropdownItem icon={<Folder size={18} />} label="Папку" onClick={handleCreateFolder} />
+                        <DropdownItem icon={<Folder size={18} className="text-brand" fill="#8b5cf6" stroke="#7c3aed" />} label="Папку" onClick={handleCreateFolder} />
                         <DropdownMenu.Separator className="h-px bg-gray-100 dark:bg-dark-border my-1.5" />
                         <DropdownItem icon={<Upload size={18} />} label="Загрузить файл" onClick={() => document.getElementById('file-upload')?.click()} />
-                        <DropdownItem icon={<Folder size={18} />} label="Загрузить папку" onClick={() => folderInputRef.current?.click()} />
+                        <DropdownItem icon={<Folder size={18} className="text-brand" fill="#8b5cf6" stroke="#7c3aed" />} label="Загрузить папку" onClick={() => folderInputRef.current?.click()} />
                     </DropdownMenu.Content>
                 </DropdownMenu.Portal>
             </DropdownMenu.Root>
