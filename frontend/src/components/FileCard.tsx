@@ -140,20 +140,25 @@ export const FileCard = ({ file, onRefresh }: { file: any, onRefresh: () => void
                 )}
             >
                 {/* Selection Checkbox */}
-                <div className={cn(
-                    "absolute top-3 left-3 w-5 h-5 rounded-md border-2 border-gray-200 dark:border-gray-600 transition-colors flex items-center justify-center",
-                    isSelected ? "bg-brand border-brand opacity-100" : "opacity-0 group-hover:opacity-100 bg-white dark:bg-dark-surface"
-                )}>
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSelection(file.id, true);
+                    }}
+                    className={cn(
+                        "absolute top-3 left-3 w-5 h-5 rounded-md border-2 border-gray-200 dark:border-gray-600 transition-colors flex items-center justify-center cursor-pointer z-10",
+                        isSelected ? "bg-brand border-brand opacity-100" : "opacity-0 group-hover:opacity-100 bg-white dark:bg-dark-surface hover:border-brand"
+                    )}>
                     {isSelected && <div className="w-2.5 h-2.5 bg-black rounded-sm" />}
                 </div>
 
-                <div className="flex-1 flex items-center justify-center w-full h-24">
+                <div className="flex-1 flex items-center justify-center w-full h-16 md:h-24">
                     {getIcon(file.mime_type, file.is_folder)}
                 </div>
 
                 <div className="w-full text-center">
-                    <p className="text-[14px] font-medium text-gray-800 dark:text-gray-200 truncate px-2">{file.name}</p>
-                    <p className="text-[12px] text-gray-400 mt-1">{file.is_folder ? 'Папка' : formatSize(file.size)}</p>
+                    <p className="text-[12px] md:text-[14px] font-medium text-gray-800 dark:text-gray-200 truncate px-1 md:px-2">{file.name}</p>
+                    <p className="text-[10px] md:text-[12px] text-gray-400 mt-0.5 md:mt-1">{file.is_folder ? 'Папка' : formatSize(file.size)}</p>
                 </div>
             </motion.div>
         </FileContextMenu>

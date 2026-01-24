@@ -11,23 +11,6 @@ from routers import auth, files
 root_path = "/api" if os.getenv("VERCEL") else ""
 app = FastAPI(title="TG Cloud Storage", root_path=root_path)
 
-# Include Routers
-app.include_router(auth.router)
-app.include_router(files.router)
-
-@app.on_event("startup")
-async def startup_event():
-    # Only run bot polling if NOT on serverless/Vercel
-    if not os.getenv("VERCEL"):
-        # Запуск бота в фоне (Polling)
-        # Примечание: в продакшене лучше использовать Webhook или отдельный процесс
-        asyncio.create_task(start_bot())
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    if not os.getenv("VERCEL"):
-        await stop_bot()
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,6 +18,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include Routers
+app.include_router(auth.router)
+app.include_router(files.router)
 
 # Database
 from database import init_db

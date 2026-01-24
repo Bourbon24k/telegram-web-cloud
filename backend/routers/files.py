@@ -94,6 +94,11 @@ def list_files(
 ):
     query = db.query(FileMetadata).filter(FileMetadata.owner_id == current_user.id)
     
+    # Only show completed uploads (or folders)
+    query = query.filter(
+        (FileMetadata.is_folder == True) | (FileMetadata.upload_complete == True)
+    )
+    
     if q:
         # Global search by name
         query = query.filter(FileMetadata.name.ilike(f"%{q}%"))
@@ -135,7 +140,8 @@ def create_folder(
 def init_upload(
     name: str = Form(...),
     size: str = Form(...),
-    parent_id: Optional[str] = Form(None), # Accepts "null" string from FormData
+    total_chunks: str = Form(...),  # NEW: Expected number of chunks
+    parent_id: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -143,7 +149,6 @@ def init_upload(
     if parent_id and parent_id != "null" and parent_id != "undefined":
         try:
             parsed_parent_id = int(parent_id)
-             # Verify parent
             parent = db.query(FileMetadata).filter(
                 FileMetadata.id == parsed_parent_id, 
                 FileMetadata.owner_id == current_user.id
@@ -159,7 +164,10 @@ def init_upload(
         parent_id=parsed_parent_id,
         is_folder=False,
         mime_type="application/octet-stream",
-        owner_id=current_user.id
+        owner_id=current_user.id,
+        total_chunks=int(total_chunks),
+        uploaded_chunks=0,
+        upload_complete=False
     )
     db.add(new_file)
     db.commit()
@@ -175,7 +183,7 @@ def init_upload(
     db.add(history)
     db.commit()
     
-    return {"file_id": new_file.id}
+    return {"file_id": new_file.id, "total_chunks": new_file.total_chunks}
 
 @router.post("/{file_id}/chunk")
 async def upload_file_chunk(
@@ -217,13 +225,49 @@ async def upload_file_chunk(
             telegram_file_id=msg.document.file_id
         )
         db.add(new_chunk)
+        
+        # Update upload progress
+        file_meta.uploaded_chunks += 1
+        if file_meta.uploaded_chunks >= file_meta.total_chunks:
+            file_meta.upload_complete = True
         db.commit()
         
-        return {"status": "uploaded", "chunk_index": chunk_index}
+        return {
+            "status": "uploaded", 
+            "chunk_index": chunk_index,
+            "uploaded_chunks": file_meta.uploaded_chunks,
+            "total_chunks": file_meta.total_chunks,
+            "complete": file_meta.upload_complete
+        }
 
     except Exception as e:
         print(f"Upload error: {e}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@router.get("/{file_id}/upload-status")
+def get_upload_status(
+    file_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Check upload status of a file"""
+    file_meta = db.query(FileMetadata).filter(
+        FileMetadata.id == file_id,
+        FileMetadata.owner_id == current_user.id
+    ).first()
+    
+    if not file_meta:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return {
+        "file_id": file_meta.id,
+        "name": file_meta.name,
+        "upload_complete": file_meta.upload_complete,
+        "uploaded_chunks": file_meta.uploaded_chunks,
+        "total_chunks": file_meta.total_chunks,
+        "progress": round((file_meta.uploaded_chunks / file_meta.total_chunks * 100) if file_meta.total_chunks > 0 else 0, 1)
+    }
+
 
 @router.delete("/{file_id}")
 async def delete_file(
@@ -240,8 +284,31 @@ async def delete_file(
     
     file_name = file_meta.name  # Save before delete
     
-    db.query(FileChunk).filter(FileChunk.file_id == file_id).delete()
-    db.delete(file_meta)
+    # Recursive delete function for folders
+    async def delete_recursive(item_id: int):
+        item = db.query(FileMetadata).filter(FileMetadata.id == item_id).first()
+        if not item:
+            return
+        
+        if item.is_folder:
+            # Delete all children first
+            children = db.query(FileMetadata).filter(FileMetadata.parent_id == item_id).all()
+            for child in children:
+                await delete_recursive(child.id)
+        
+        # Delete chunks from Telegram channel and database
+        chunks = db.query(FileChunk).filter(FileChunk.file_id == item_id).all()
+        for chunk in chunks:
+            try:
+                # Delete message from Telegram channel
+                await bot.delete_message(chat_id=chunk.channel_id, message_id=chunk.channel_message_id)
+            except Exception as e:
+                print(f"Failed to delete Telegram message {chunk.channel_message_id}: {e}")
+            db.delete(chunk)
+        
+        db.delete(item)
+    
+    await delete_recursive(file_id)
     db.commit()
     
     # Log history (file_id is None since file is deleted)

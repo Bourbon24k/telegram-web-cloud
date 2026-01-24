@@ -35,7 +35,7 @@ export const filesApi = {
     listFiles: (parent_id?: number | null, query?: string) => api.get('/files/', { params: { parent_id, q: query } }),
     createFolder: (name: string, parent_id?: number | null) => api.post('/files/create_folder', { name, parent_id }),
     createFolderStructure: (paths: string[], parent_id?: number | null) => api.post('/files/structure', { paths, parent_id }),
-    initUpload: (name: string, size: number, parent_id?: number | null) => api.postForm('/files/init_upload', { name, size, parent_id }),
+    initUpload: (name: string, size: number, total_chunks: number, parent_id?: number | null) => api.postForm('/files/init_upload', { name, size, total_chunks, parent_id }),
     uploadChunk: (file_id: number, chunkIndex: number, chunk: Blob) => {
         const formData = new FormData();
         formData.append('chunk_index', chunkIndex.toString());
@@ -55,4 +55,5 @@ export const filesApi = {
     shareFile: (file_id: number) => api.post(`/files/${file_id}/share`),
     moveFile: (file_id: number, new_parent_id: number | null) => api.put(`/files/${file_id}/move`, { new_parent_id }),
     getFileInfo: (file_id: number) => api.get(`/files/${file_id}/info`),
+    getUploadStatus: (file_id: number) => api.get(`/files/${file_id}/upload-status`),
 };

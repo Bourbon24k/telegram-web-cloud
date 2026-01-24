@@ -37,10 +37,9 @@ export const UploadManager = () => {
         try {
             setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'uploading' } : t));
 
-            const { data } = await filesApi.initUpload(task.file.name, task.file.size, currentFolderId);
-            const fileId = data.file_id;
-
             const totalChunks = Math.ceil(task.file.size / CHUNK_SIZE);
+            const { data } = await filesApi.initUpload(task.file.name, task.file.size, totalChunks, currentFolderId);
+            const fileId = data.file_id;
 
             for (let i = 0; i < totalChunks; i++) {
                 const start = i * CHUNK_SIZE;
@@ -155,8 +154,8 @@ export const UploadManager = () => {
             />
             {tasks.length > 0 && (
                 <div className={cn(
-                    "fixed bottom-6 right-6 w-96 bg-white dark:bg-dark-surface shadow-modal rounded-2xl border border-gray-100 dark:border-dark-border overflow-hidden transition-all duration-300 z-50",
-                    isMinimized ? "h-14 w-auto" : "max-h-[400px]"
+                    "fixed bottom-4 right-2 left-2 md:left-auto md:right-6 md:bottom-6 md:w-96 bg-white dark:bg-dark-surface shadow-modal rounded-2xl border border-gray-100 dark:border-dark-border overflow-hidden transition-all duration-300 z-50",
+                    isMinimized ? "h-14 left-auto right-2 w-auto md:right-6" : "max-h-[400px]"
                 )}>
                     <div
                         className="bg-white dark:bg-dark-surface p-4 flex justify-between items-center cursor-pointer border-b border-gray-100 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"

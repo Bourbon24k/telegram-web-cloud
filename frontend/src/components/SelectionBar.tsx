@@ -29,12 +29,12 @@ export const SelectionBar = ({ onRefresh }: { onRefresh: () => void }) => {
     };
 
     return (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-dark-surface shadow-modal rounded-2xl flex items-center gap-2 p-2 px-4 border border-gray-100 dark:border-dark-border z-50 animate-in slide-in-from-bottom-5">
-            <div className="flex items-center gap-3 border-r border-gray-200 dark:border-gray-700 pr-4 mr-2">
+        <div className="fixed bottom-4 left-2 right-2 md:left-1/2 md:right-auto md:-translate-x-1/2 md:bottom-6 bg-white dark:bg-dark-surface shadow-modal rounded-2xl flex items-center gap-2 p-2 px-3 md:px-4 border border-gray-100 dark:border-dark-border z-50 animate-in slide-in-from-bottom-5">
+            <div className="flex items-center gap-2 md:gap-3 border-r border-gray-200 dark:border-gray-700 pr-3 md:pr-4 mr-1 md:mr-2">
                 <div className="bg-brand w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs">
                     {selectedFileIds.length}
                 </div>
-                <span className="font-medium text-sm dark:text-gray-200">Выбрано</span>
+                <span className="font-medium text-xs md:text-sm dark:text-gray-200">Выбрано</span>
             </div>
 
             <button

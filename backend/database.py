@@ -32,6 +32,11 @@ class FileMetadata(Base):
     accessed_at = Column(DateTime, default=datetime.utcnow)  # For recent files
     share_token = Column(String, nullable=True, index=True)  # For sharing
     
+    # Upload progress tracking
+    upload_complete = Column(Boolean, default=False)  # True when all chunks uploaded
+    total_chunks = Column(Integer, default=0)  # Expected number of chunks
+    uploaded_chunks = Column(Integer, default=0)  # Number of chunks uploaded so far
+    
     owner = relationship("User", backref="files")
     children = relationship("FileMetadata", backref=backref('parent', remote_side=[id]))
     chunks = relationship("FileChunk", back_populates="file")

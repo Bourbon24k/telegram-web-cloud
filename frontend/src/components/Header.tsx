@@ -12,41 +12,41 @@ export const Header = () => {
     const { searchQuery, setSearchQuery, currentFolderId, setCurrentFolder, currentView } = useFileStore();
 
     return (
-        <header className="h-[72px] px-6 flex items-center justify-between sticky top-0 bg-[#f7f7f7] dark:bg-dark-bg z-40">
-            <div className="flex items-center gap-4 flex-1 max-w-2xl">
+        <header className="h-[64px] md:h-[72px] px-3 md:px-6 flex items-center justify-between sticky top-0 bg-[#f7f7f7] dark:bg-dark-bg z-40 gap-2">
+            <div className="flex items-center gap-2 md:gap-4 flex-1 max-w-2xl">
                 {/* Mobile Menu Button */}
                 <button
                     onClick={toggleSidebar}
-                    className="md:hidden w-10 h-10 bg-white dark:bg-dark-surface rounded-xl shadow-soft flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-brand transition-colors"
+                    className="md:hidden w-9 h-9 bg-white dark:bg-dark-surface rounded-xl shadow-soft flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-brand transition-colors flex-shrink-0"
                 >
-                    <Menu size={20} />
+                    <Menu size={18} />
                 </button>
                 {/* Back button when inside folder */}
                 {currentFolderId !== null && currentView === 'files' && (
                     <button
                         onClick={() => setCurrentFolder(null)}
-                        className="w-10 h-10 bg-white dark:bg-dark-surface rounded-xl shadow-soft flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-brand transition-colors"
+                        className="w-9 h-9 md:w-10 md:h-10 bg-white dark:bg-dark-surface rounded-xl shadow-soft flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-brand transition-colors flex-shrink-0"
                         title="Назад в корневую папку"
                     >
-                        <ArrowLeft size={20} />
+                        <ArrowLeft size={18} />
                     </button>
                 )}
 
-                <div className="relative group flex-1">
+                <div className="relative group flex-1 min-w-0">
                     <input
                         type="text"
-                        placeholder="Поиск в Диске"
+                        placeholder="Поиск..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-white dark:bg-dark-surface border-none rounded-2xl py-2.5 pl-11 pr-4 shadow-soft text-[14px] focus:ring-2 focus:ring-brand focus:outline-none transition-all dark:text-white dark:placeholder-gray-500"
+                        className="w-full bg-white dark:bg-dark-surface border-none rounded-xl md:rounded-2xl py-2 md:py-2.5 pl-9 md:pl-11 pr-3 md:pr-4 shadow-soft text-[13px] md:text-[14px] focus:ring-2 focus:ring-brand focus:outline-none transition-all dark:text-white dark:placeholder-gray-500"
                     />
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 pl-8">
-                {/* View Toggle */}
-                <div className="flex bg-white dark:bg-dark-surface p-1 rounded-xl shadow-soft gap-1">
+            <div className="flex items-center gap-2 md:gap-4 md:pl-8 flex-shrink-0">
+                {/* View Toggle - Hidden on mobile */}
+                <div className="hidden sm:flex bg-white dark:bg-dark-surface p-1 rounded-xl shadow-soft gap-1">
                     <button
                         onClick={() => setViewMode('grid')}
                         className={cn(
@@ -74,16 +74,16 @@ export const Header = () => {
                 {/* Theme Toggle */}
                 <button
                     onClick={toggleDarkMode}
-                    className="w-10 h-10 bg-white dark:bg-dark-surface rounded-xl shadow-soft flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-brand transition-colors"
+                    className="w-9 h-9 md:w-10 md:h-10 bg-white dark:bg-dark-surface rounded-xl shadow-soft flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-brand transition-colors"
                 >
-                    {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
+                    {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
                 </button>
 
                 {/* User Profile */}
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger asChild>
-                        <button className="w-10 h-10 rounded-full bg-brand text-black flex items-center justify-center font-bold text-sm shadow-soft cursor-pointer">
-                            {user?.name?.[0] || <User size={20} />}
+                        <button className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-brand text-black flex items-center justify-center font-bold text-sm shadow-soft cursor-pointer">
+                            {user?.name?.[0] || <User size={18} />}
                         </button>
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Portal>
