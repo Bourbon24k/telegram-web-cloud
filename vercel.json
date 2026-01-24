@@ -6,11 +6,11 @@
         },
         {
             "source": "/s/(.*)",
-            "destination": "/frontend/index.html"
+            "destination": "/frontend/dist/index.html"
         },
         {
             "source": "/(.*)",
-            "destination": "/frontend/index.html"
+            "destination": "/frontend/dist/index.html"
         }
     ]
 }
