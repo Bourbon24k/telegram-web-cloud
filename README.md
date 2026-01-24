@@ -1,90 +1,95 @@
-# Telegram Cloud Storage
+# 🌌 Yuku Cloud Storage
 
-A cloud storage application that uses Telegram as the storage backend. Built with FastAPI (Python) and React (TypeScript).
+A premium, state-of-the-art cloud storage application that leverages **Telegram as a storage backend**. Built with performance and user experience in mind.
 
-## Features
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688)
+![React](https://img.shields.io/badge/Frontend-React-61DAFB)
 
-- **Unlimited Storage**: Uses Telegram's file storage capabilities.
-- **Modern UI**: Clean, responsive interface similar to Yandex Disk / Google Drive.
-- **Secure**: Login verification via Telegram bot.
-- **File Management**: Upload, download, rename, delete, and organize files.
+## ✨ Features
 
-## Tech Stack
+- **🛡️ Secure Encryption**: All file chunks are encrypted with AES-256 before being sent to Telegram.
+- **🚀 Unlimited Storage**: Store files in your private Telegram channel storage.
+- **💎 Premium UI**: Modern, fluid interface with support for **Light/Dark mode**, **Grid/List views**, and smooth animations.
+- **📱 Telegram Web App Integration**: Log in seamlessly via a Telegram Bot or use it directly as a Telegram Mini App.
+- **🔗 Smart Sharing**: Generate secure, hash-based sharing links with a dedicated landing page for public downloads.
+- **📊 Real-time Upload Monitor**: Track upload speed, ETA, and progress with a detailed dashboard.
+- **📁 Multi-format Support**: Integrated previews for images, videos, and common file types.
 
-- **Backend**: Python 3.10+, FastAPI, SQLAlchemy, Aiogram (Telegram Bot API)
-- **Frontend**: React, Vite, TailwindCSS (assumed based on UI)
-- **Database**: SQLite (local) / PostgreSQL (production ready)
+## 🛠️ Tech Stack
 
-## Prerequisites
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Framer Motion, Lucide Icons.
+- **Backend**: Python 3.10+, FastAPI, SQLAlchemy, Aiogram 3.x (Bot API).
+- **Database**: SQLite (local) / PostgreSQL (production).
+- **Deployment**: Optimized for Vercel (Frontend & Serverless Functions).
 
-- Python 3.10+
-- Node.js 18+
-- Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
-- Telegram API ID and Hash (from [my.telegram.org](https://my.telegram.org))
+## 🚀 Getting Started
 
-## Setup
+### Prerequisites
 
-### 1. Backend
+1.  **Telegram Bot**: Create one via [@BotFather](https://t.me/BotFather) and get the `BOT_TOKEN`.
+2.  **Storage Channel**: Create a private channel/group and add your bot as an administrator. Get the `CHANNEL_ID` (looks like `-100...`).
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
+### Backend Setup
 
-2. Create a virtual environment and activate it:
-   ```bash
-   python -m venv venv
-   # Windows
-   .\venv\Scripts\activate
-   # Linux/Mac
-   source venv/bin/activate
-   ```
+1.  Navigate to the `backend` folder:
+    ```bash
+    cd backend
+    ```
+2.  Create and activate a virtual environment:
+    ```bash
+    python -m venv venv
+    # Windows
+    .\venv\Scripts\activate
+    # Linux/Mac
+    source venv/bin/activate
+    ```
+3.  Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  Configure environment variables:
+    ```bash
+    cp .env.example .env
+    # Edit .env with your credentials
+    ```
+5.  Launch the server:
+    ```bash
+    uvicorn main:app --reload
+    ```
 
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Frontend Setup
 
-4. Create a `.env` file in the `backend` directory:
-   ```env
-   BOT_TOKEN=your_bot_token_here
-   API_ID=your_api_id
-   API_HASH=your_api_hash
-   SESSION_STRING=your_telethon_session_string
-   # Optional:
-   DATABASE_URL=sqlite:///./cloud.db
-   ENCRYPTION_KEY=your_secrey_key
-   ```
-   *Note: `API_ID`, `API_HASH`, and `SESSION_STRING` might be needed depending on specific implementation details for MTProto.*
+1.  Navigate to the `frontend` folder:
+    ```bash
+    cd frontend
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Configure environment:
+    ```bash
+    cp .env.example .env
+    # Usually VITE_API_URL=http://localhost:8000 for local dev
+    ```
+4.  Start development server:
+    ```bash
+    npm run dev
+    ```
 
-5. Run the server:
-   ```bash
-   uvicorn main:app --reload
-   ```
+## 🌍 Deployment (Vercel)
 
-### 2. Frontend
+This project is pre-configured for **Vercel**. 
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
+1.  Connect your repository to Vercel.
+2.  Set the `vercel.json` as the root configuration.
+3.  Define Environment Variables in the Vercel Dashboard (same as in `.env.example`).
+4.  Vercel will automatically handle the Python backend via Serverless Functions and serve the React frontend.
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+## 📜 License
 
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
+Distributed under the MIT License. See `LICENSE` for more information.
 
-## Usage
-
-1. Open `http://localhost:5173` (or the port shown by Vite).
-2. Login using the Telegram bot authentication flow.
-3. Start uploading files!
-
-## License
-
-MIT
+---
+*Created with ❤️ for the Telegram community.*
