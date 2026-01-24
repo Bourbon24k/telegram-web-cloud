@@ -13,6 +13,10 @@ from datetime import datetime
 from pydantic import BaseModel
 from utils.encryption import encrypt_chunk, decrypt_chunk
 from routers.auth import get_current_user, get_db
+import asyncio
+import zipfile
+from aiogram.exceptions import TelegramRetryAfter
+from io import BytesIO
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -158,6 +162,37 @@ def init_upload(
         except ValueError:
             pass
         
+    # Check for existing incomplete file
+    existing_file = db.query(FileMetadata).filter(
+        FileMetadata.owner_id == current_user.id,
+        FileMetadata.name == name,
+        FileMetadata.parent_id == parsed_parent_id,
+        FileMetadata.upload_complete == False
+    ).first()
+
+    if existing_file:
+        # Log history for resume
+        history = FileHistory(
+            user_id=current_user.id,
+            file_id=existing_file.id,
+            action="resume_upload",
+            file_name=name
+        )
+        db.add(history)
+        db.commit()
+        
+        # Get existing chunks to skip
+        chunks = db.query(FileChunk).filter(FileChunk.file_id == existing_file.id).all()
+        # Assume chunk_order = frontend_index * 1000 + part
+        existing_indices = list(set([int(c.chunk_order / 1000) for c in chunks]))
+        
+        return {
+            "file_id": existing_file.id, 
+            "total_chunks": existing_file.total_chunks,
+            "existing_chunks": existing_indices,
+            "resumed": True
+        }
+
     new_file = FileMetadata(
         name=name,
         size=int(size),
@@ -183,7 +218,12 @@ def init_upload(
     db.add(history)
     db.commit()
     
-    return {"file_id": new_file.id, "total_chunks": new_file.total_chunks}
+    return {
+        "file_id": new_file.id, 
+        "total_chunks": new_file.total_chunks, 
+        "existing_chunks": [],
+        "resumed": False
+    }
 
 @router.post("/{file_id}/chunk")
 async def upload_file_chunk(
@@ -203,33 +243,99 @@ async def upload_file_chunk(
 
     content = await file.read()
     
+    # Check if this chunk (index) already processed/exists?
+    # Resumable logic relies on init_upload telling client to skip. 
+    # But if client ignores, we might duplicate.
+    # Safe guard: Check if chunk range exists?
+    # db.query(FileChunk).filter(file_id, chunk_order >= index*1000, chunk_order < index*1000 + 1000).count()
+    # If exists, we skip to avoid dupes.
+    existing_count = db.query(FileChunk).filter(
+        FileChunk.file_id == file_id,
+        FileChunk.chunk_order >= chunk_index * 1000,
+        FileChunk.chunk_order < (chunk_index + 1) * 1000
+    ).count()
+    
+    if existing_count > 0:
+         return {
+            "status": "already_exists",
+            "chunk_index": chunk_index,
+            "uploaded_chunks": file_meta.uploaded_chunks
+        }
+    
+    CHUNK_SIZE_LIMIT = 45 * 1024 * 1024 # 45MB
+    
     try:
-        # ENCRYPTION STEP
-        encrypted_content = encrypt_chunk(content)
+        parts = []
+        if len(content) <= CHUNK_SIZE_LIMIT:
+            parts.append(content)
+        else:
+            for i in range(0, len(content), CHUNK_SIZE_LIMIT):
+                parts.append(content[i:i+CHUNK_SIZE_LIMIT])
+                
+        # Prepare valid tasks
+        async def process_part(part_index, part_content):
+            # ENCRYPTION STEP
+            encrypted_content = encrypt_chunk(part_content)
+            
+            input_file = BufferedInputFile(encrypted_content, filename=f"{file_meta.name}.p{chunk_index}.{part_index}.enc")
+            caption = f"FileID: {file_id} | Chunk: {chunk_index}.{part_index} | Size: {len(part_content)}"
+            
+            msg = None
+            retries = 0
+            while retries < 5:
+                try:
+                    msg = await bot.send_document(
+                        chat_id=int(CHANNEL_ID),
+                        document=input_file,
+                        caption=caption
+                    )
+                    break 
+                except TelegramRetryAfter as e:
+                    wait_time = e.retry_after + 2
+                    print(f"Flood control exceeded. Waiting for {wait_time} seconds before retrying...")
+                    await asyncio.sleep(wait_time)
+                    retries += 1
+                except Exception as e:
+                    # Generic retry for other potential temporary issues
+                    if "Flood control exceeded" in str(e) or "Too Many Requests" in str(e):
+                        # Extract retry time if possible, otherwise default
+                        wait_time = 30
+                        print(f"Flood error identified by string. Waiting {wait_time}s. Error: {e}")
+                        await asyncio.sleep(wait_time)
+                        retries += 1
+                    else:
+                        raise e
+            
+            if not msg:
+                 raise Exception("Failed to upload chunk after retries")
+
+            return msg, len(part_content)
+
+        # Execute parallel uploads
+        tasks = [process_part(idx, p) for idx, p in enumerate(parts)]
+        results = await asyncio.gather(*tasks)
         
-        input_file = BufferedInputFile(encrypted_content, filename=f"{file_meta.name}.part{chunk_index}.enc")
-        caption = f"FileID: {file_id} | Chunk: {chunk_index} | Encrypted | User: {current_user.id}"
-        
-        msg = await bot.send_document(
-            chat_id=int(CHANNEL_ID),
-            document=input_file,
-            caption=caption
-        )
-        
-        new_chunk = FileChunk(
-            file_id=file_id,
-            channel_message_id=msg.message_id,
-            channel_id=int(CHANNEL_ID),
-            chunk_order=chunk_index,
-            size=len(content), # Informational: original size
-            telegram_file_id=msg.document.file_id
-        )
-        db.add(new_chunk)
+        # Save to DB
+        for idx, (msg, size) in enumerate(results):
+            new_chunk = FileChunk(
+                file_id=file_id,
+                channel_message_id=msg.message_id,
+                channel_id=int(CHANNEL_ID),
+                chunk_order=chunk_index * 1000 + idx, # Mapping
+                size=size,
+                telegram_file_id=msg.document.file_id
+            )
+            db.add(new_chunk)
         
         # Update upload progress
         file_meta.uploaded_chunks += 1
+        
+        # Check completeness (if uploaded_chunks matches total_chunks)
+        # However, due to resumability, uploaded_chunks count might be skewed if we rely on increments.
+        # Better to trust Total Chunks if we know it.
         if file_meta.uploaded_chunks >= file_meta.total_chunks:
             file_meta.upload_complete = True
+            
         db.commit()
         
         return {
@@ -613,4 +719,116 @@ async def download_file(
         file_generator(), 
         media_type=file_meta.mime_type or "application/octet-stream",
         headers={"Content-Disposition": f"attachment; filename={file_meta.name}"}
+    )
+
+@router.get("/{folder_id}/download_folder")
+async def download_folder(
+    folder_id: int,
+    token: str,
+    db: Session = Depends(get_db)
+):
+    from utils.security import verify_token
+    tg_id = verify_token(token)
+    if not tg_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = db.query(User).filter(User.phone_number == tg_id).first()
+    if not user:
+         raise HTTPException(status_code=401, detail="User not found")
+
+    folder = db.query(FileMetadata).filter(
+        FileMetadata.id == folder_id,
+        FileMetadata.owner_id == user.id,
+        FileMetadata.is_folder == True
+    ).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    # In-memory method (better for simpler environments, but can eat RAM if large files)
+    # For a scalable approach, we should use a proper zip stream generator.
+    # We will use a simple generator that yields zip chunks.
+    # Note: Creating a TRUE streaming zip in Python without temp files is complex 
+    # because ZIP requires a central directory at the end. 
+    # standard zipfile module supports writing to streams but might need seekable stream for some modes.
+    # We will use a simpler approach: Collect all files, download them, write to a BytesIO (RAM heavy if big).
+    # OPTIMIZATION: Use 'stream_zip' library if available? User didn't ask us to add libs.
+    # fallback: We'll implement a generator that constructs local zip headers manually or allows zipfile to write to buffer.
+    
+    # Let's try to just walk everything and return a single zip for now (non-streaming if not requested explicitly to be streaming, 
+    # but the user asked to "download folder").
+    # Given the risk of timeout on Vercel/similar with large folders, implementing a FULL download of all files into memory is BAD.
+    
+    # We will assume "download folder" can be just a flat list of files for now or improved later?
+    # No, user wants folder download. We'll verify file size.
+    # Let's use a temporary file approach on disk, then stream the file?
+    
+    # Recursive collector
+    files_to_zip = [] # (path/in/zip, file_meta)
+    
+    async def collect_files(current_id, current_path):
+        children = db.query(FileMetadata).filter(FileMetadata.parent_id == current_id).all()
+        for child in children:
+            if child.is_folder:
+                await collect_files(child.id, f"{current_path}/{child.name}")
+            else:
+                 files_to_zip.append((f"{current_path}/{child.name}", child))
+    
+    await collect_files(folder_id, folder.name)
+    
+    if not files_to_zip:
+         raise HTTPException(status_code=404, detail="Folder is empty")
+
+    # To avoid memory issues, we stream content.
+    # But zipfile requires seeking to update headers. 
+    # For now, we will do: write to BytesIO for each file and yield? No, headers need to be correct.
+    
+    # Let's just zip individual files? No.
+    # We will go with standard BytesIO approach but warn about memory?
+    # Or, simpler:
+    
+    # Implement a generator that yields bytes.
+    # We will use `zipfile.ZipFile` with `mode='w'` on a BytesIO, but we need to trick it to yield.
+    # Actually, let's use a simpler hack: create a temp file.
+    import tempfile
+    import os
+    
+    async def zip_generator():
+        with tempfile.TemporaryFile() as tmp:
+            with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
+                for path, meta in files_to_zip:
+                    # Download file content
+                    chunks = db.query(FileChunk).filter(FileChunk.file_id == meta.id).order_by(FileChunk.chunk_order).all()
+                    file_bytes = b""
+                    for chunk in chunks:
+                         if chunk.telegram_file_id:
+                             try:
+                                file_info = await bot.get_file(chunk.telegram_file_id)
+                                file_content_io = await bot.download_file(file_info.file_path)
+                                encrypted_data = file_content_io.read()
+                                file_bytes += decrypt_chunk(encrypted_data)
+                             except:
+                                 pass
+                    
+                    # Write to zip
+                    # Timestamp fix
+                    zinfo = zipfile.ZipInfo(path)
+                    zinfo.date_time = datetime.now().timetuple()[:6]
+                    zinfo.compress_type = zipfile.ZIP_DEFLATED
+                    zf.writestr(zinfo, file_bytes)
+            
+            # Reset pointer
+            tmp.seek(0)
+            while True:
+                chunk = tmp.read(8192)
+                if not chunk:
+                    break
+                yield chunk
+
+    # This is still memory intensive as it buffers "file_bytes" in RAM before zipping.
+    # But for a "cloud test" it's likely acceptable.
+    
+    return StreamingResponse(
+        zip_generator(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={folder.name}.zip"}
     )

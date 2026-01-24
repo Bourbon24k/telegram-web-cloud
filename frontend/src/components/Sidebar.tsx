@@ -80,11 +80,11 @@ export const Sidebar = ({ onRefresh }: { onRefresh: () => void }) => {
 
             {/* Brand */}
             <div className="flex items-center gap-2.5 px-2">
-                <div className="bg-brand text-black p-1.5 rounded-xl">
+                <div className="bg-brand text-white p-1.5 rounded-xl">
                     <Cloud size={24} strokeWidth={2.5} />
                 </div>
                 <span className="text-xl font-bold tracking-tight dark:text-gray-100">
-                    TG <span className="font-normal text-gray-600 dark:text-gray-400">Disk</span>
+                    Yuku <span className="font-normal text-gray-600 dark:text-gray-400">Cloud</span>
                 </span>
             </div>
 

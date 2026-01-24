@@ -9,6 +9,7 @@ import { MoveModal } from './components/MoveModal';
 import { PropertiesModal } from './components/PropertiesModal';
 import { HistoryView } from './components/HistoryView';
 import { SelectionBar } from './components/SelectionBar';
+import { PreviewModal } from './components/PreviewModal';
 import { useFileStore } from './store/fileStore';
 import { useAuthStore } from './store/authStore';
 import { useUIStore } from './store/uiStore';
@@ -38,6 +39,28 @@ function App() {
       return () => clearTimeout(timeoutId);
     }
   }, [isAuthenticated, currentFolderId, currentView, searchQuery]);
+
+  useEffect(() => {
+    // @ts-ignore
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      if (tg.initData && !isAuthenticated) {
+        authApi.loginWebApp(tg.initData)
+          .then(({ data }) => {
+            login(data.token, { id: 'webapp', name: 'TG User' });
+            // Refresh me
+            filesApi.listFiles(); // Just to start
+            toast.success("Автоматический вход через Telegram");
+          })
+          .catch(e => {
+            console.error("WebApp login failed", e);
+            // toast.error("Не удалось войти через Telegram App");
+          });
+      }
+    }
+  }, []);
 
   const loadFiles = async () => {
     try {
@@ -88,7 +111,7 @@ function App() {
               <Cloud size={40} strokeWidth={2.5} />
             </div>
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Вход в TG Disk</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Вход в Yuku Cloud</h1>
               <p className="text-gray-500 mt-2 text-sm">Безопасное облако в Telegram</p>
             </div>
           </div>
@@ -145,7 +168,7 @@ function App() {
     }
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-20">
+      <div className="grid grid-cols-auto-fit-150 gap-3 md:gap-4 pb-20">
         {filteredFiles.map((f: any) => (
           <FileCard key={f.id} file={f} onRefresh={loadFiles} />
         ))}
@@ -185,6 +208,7 @@ function App() {
       <ShareModal />
       <MoveModal onRefresh={loadFiles} />
       <PropertiesModal />
+      <PreviewModal />
     </div>
   );
 }

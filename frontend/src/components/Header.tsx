@@ -46,14 +46,14 @@ export const Header = () => {
 
             <div className="flex items-center gap-2 md:gap-4 md:pl-8 flex-shrink-0">
                 {/* View Toggle - Hidden on mobile */}
-                <div className="hidden sm:flex bg-white dark:bg-dark-surface p-1 rounded-xl shadow-soft gap-1">
+                <div className="hidden sm:flex bg-white dark:bg-dark-surface p-1 rounded-xl shadow-soft gap-1 border border-gray-100 dark:border-dark-border">
                     <button
                         onClick={() => setViewMode('grid')}
                         className={cn(
                             "p-2 rounded-lg transition-all",
                             viewMode === 'grid'
-                                ? "bg-gray-100 dark:bg-white/10 text-black dark:text-white"
-                                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                ? "bg-brand text-black shadow-sm"
+                                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
                         )}
                     >
                         <LayoutGrid size={18} />
@@ -63,8 +63,8 @@ export const Header = () => {
                         className={cn(
                             "p-2 rounded-lg transition-all",
                             viewMode === 'list'
-                                ? "bg-gray-100 dark:bg-white/10 text-black dark:text-white"
-                                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                ? "bg-brand text-black shadow-sm"
+                                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
                         )}
                     >
                         <ListIcon size={18} />

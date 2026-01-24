@@ -12,9 +12,14 @@ interface UploadTask {
     status: 'pending' | 'uploading' | 'completed' | 'error';
     error?: string;
     parentId?: number | null;
+    uploadedBytes: number;
+    totalBytes: number;
+    startTime: number;
+    speed?: string; // e.g. "1.5 MB/s"
+    eta?: string;   // e.g. "2 min"
 }
 
-const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
+const CHUNK_SIZE = 85 * 1024 * 1024; // 85MB
 
 export const UploadManager = () => {
     const [tasks, setTasks] = useState<UploadTask[]>([]);
@@ -40,14 +45,66 @@ export const UploadManager = () => {
             const totalChunks = Math.ceil(task.file.size / CHUNK_SIZE);
             const { data } = await filesApi.initUpload(task.file.name, task.file.size, totalChunks, currentFolderId);
             const fileId = data.file_id;
+            const existingChunks = new Set(data.existing_chunks || []);
+
+            if (data.resumed) {
+                const initialProgress = Math.round((existingChunks.size / totalChunks) * 100);
+                const uploadedBytes = existingChunks.size * CHUNK_SIZE; // Approximate
+                setTasks(prev => prev.map(t => t.id === task.id ? { ...t, progress: initialProgress, uploadedBytes } : t));
+            }
+
+            let currentUploadedBytes = task.uploadedBytes || 0;
 
             for (let i = 0; i < totalChunks; i++) {
+                if (existingChunks.has(i)) {
+                    // Recalculate if resumed
+                    if (!data.resumed) {
+                        currentUploadedBytes += CHUNK_SIZE; // Rough est
+                        if (currentUploadedBytes > task.totalBytes) currentUploadedBytes = task.totalBytes;
+
+                        const progress = Math.round((currentUploadedBytes / task.totalBytes) * 100);
+                        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, progress } : t));
+                    }
+                    continue;
+                }
+
                 const start = i * CHUNK_SIZE;
                 const end = Math.min(start + CHUNK_SIZE, task.file.size);
                 const chunk = task.file.slice(start, end);
+                const chunkSize = chunk.size;
+
                 await filesApi.uploadChunk(fileId, i, chunk);
-                const progress = Math.round(((i + 1) / totalChunks) * 100);
-                setTasks(prev => prev.map(t => t.id === task.id ? { ...t, progress } : t));
+
+                currentUploadedBytes += chunkSize;
+                const now = Date.now();
+                const timeElapsed = (now - task.startTime) / 1000; // seconds
+                // Calculate speed based on recent progress or average? Average is safer.
+                // Actually startTime should be start of THIS upload session.
+
+                const speedBytesPerSec = currentUploadedBytes / (timeElapsed || 1);
+                const remainingBytes = task.totalBytes - currentUploadedBytes;
+                const etaSeconds = remainingBytes / (speedBytesPerSec || 1);
+
+                const formatSpeed = (bytesPerSec: number) => {
+                    const mb = bytesPerSec / (1024 * 1024);
+                    return `${mb.toFixed(1)} MB/s`;
+                };
+
+                const formatTime = (seconds: number) => {
+                    if (seconds < 60) return `${Math.ceil(seconds)} сек`;
+                    const mins = Math.ceil(seconds / 60);
+                    return `${mins} мин`;
+                };
+
+                const progress = Math.round((currentUploadedBytes / task.totalBytes) * 100);
+
+                setTasks(prev => prev.map(t => t.id === task.id ? {
+                    ...t,
+                    progress,
+                    uploadedBytes: currentUploadedBytes,
+                    speed: formatSpeed(speedBytesPerSec),
+                    eta: formatTime(etaSeconds)
+                } : t));
             }
 
             setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'completed', progress: 100 } : t));
@@ -118,7 +175,10 @@ export const UploadManager = () => {
                     file: f,
                     progress: 0,
                     status: 'pending' as const,
-                    parentId: parentId
+                    parentId: parentId,
+                    uploadedBytes: 0,
+                    totalBytes: f.size,
+                    startTime: Date.now()
                 };
             });
 
@@ -181,10 +241,15 @@ export const UploadManager = () => {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-center mb-0.5">
-                                                <span className="text-sm font-medium truncate dark:text-gray-200">{task.file.name}</span>
-                                                <span className="text-xs text-gray-400 font-mono">
-                                                    {task.status === 'error' ? 'Ошибка' : `${task.progress}%`}
+                                                <span className="text-sm font-medium truncate dark:text-gray-200 block w-full">{task.file.name}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[10px] text-gray-400 mb-1 font-mono">
+                                                <span>
+                                                    {task.status === 'uploading' && task.speed ? `${task.speed} · ETA: ${task.eta}` :
+                                                        task.status === 'completed' ? 'Завершено' :
+                                                            task.status === 'error' ? 'Ошибка' : 'Ожидание...'}
                                                 </span>
+                                                <span>{task.progress}%</span>
                                             </div>
                                             <div className="h-1 bg-gray-100 dark:bg-[#333] rounded-full overflow-hidden">
                                                 <div

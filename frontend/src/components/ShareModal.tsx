@@ -17,7 +17,7 @@ export const ShareModal = () => {
             setLoading(true);
             filesApi.shareFile(modalFile.id)
                 .then(({ data }) => {
-                    setShareUrl(data.share_url);
+                    setShareUrl(filesApi.getShareLink(data.share_token));
                 })
                 .catch(() => toast.error('Ошибка создания ссылки'))
                 .finally(() => setLoading(false));

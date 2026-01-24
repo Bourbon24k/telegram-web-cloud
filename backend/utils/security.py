@@ -38,3 +38,44 @@ def verify_token(token: str) -> Optional[str]:
         return tg_id
     except JWTError:
         return None
+
+import hmac
+import hashlib
+import json
+from urllib.parse import unquote
+from settings import BOT_TOKEN
+
+def validate_webapp_data(init_data: str) -> Optional[dict]:
+    """
+    Validates the initData string from Telegram Web App.
+    Returns the user dict if valid, None otherwise.
+    """
+    try:
+        parsed_data = {}
+        for chunk in unquote(init_data).split('&'):
+            if '=' in chunk:
+                key, value = chunk.split('=', 1)
+                parsed_data[key] = value
+        
+        hash_check = parsed_data.get('hash')
+        if not hash_check:
+            return None
+            
+        # Remove hash from data to verify
+        data_check_arr = []
+        for k, v in parsed_data.items():
+            if k != 'hash':
+                data_check_arr.append(f'{k}={v}')
+        
+        data_check_string = '\n'.join(sorted(data_check_arr))
+        
+        secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
+        calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+        
+        if calculated_hash == hash_check:
+            if 'user' in parsed_data:
+                return json.loads(parsed_data['user'])
+        return None
+    except Exception as e:
+        print(f"WebApp auth error: {e}")
+        return None

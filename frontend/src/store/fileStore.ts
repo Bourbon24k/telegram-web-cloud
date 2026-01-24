@@ -21,7 +21,7 @@ interface HistoryItem {
 }
 
 type ViewType = 'files' | 'recent' | 'history';
-type ModalType = 'share' | 'move' | 'properties' | null;
+type ModalType = 'share' | 'move' | 'properties' | 'preview' | null;
 
 interface FileState {
     files: FileItem[];

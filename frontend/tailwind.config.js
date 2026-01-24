@@ -10,8 +10,8 @@ export default {
         extend: {
             colors: {
                 brand: {
-                    DEFAULT: '#fc0', // Yandex Yellow
-                    hover: '#f5c200',
+                    DEFAULT: '#8b5cf6', // Violet 500
+                    hover: '#7c3aed',   // Violet 600
                 },
                 dark: {
                     bg: '#19191a',

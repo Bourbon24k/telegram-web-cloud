@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import SessionLocal, User
 from bot import login_codes
-from utils.security import create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from utils.security import create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES, validate_webapp_data
 from datetime import timedelta
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -12,6 +12,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 class LoginRequest(BaseModel):
     tg_id: str
     code: str
+
+class WebAppLoginRequest(BaseModel):
+    initData: str
 
 def get_db():
     db = SessionLocal()
@@ -81,6 +84,29 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(clean_tg_id)}, expires_delta=access_token_expires
+    )
+    
+    return {"token": access_token, "status": "success"}
+
+@router.post("/login/webapp")
+def login_webapp(req: WebAppLoginRequest, db: Session = Depends(get_db)):
+    user_data = validate_webapp_data(req.initData)
+    if not user_data:
+        raise HTTPException(status_code=400, detail="Invalid initialization data")
+    
+    tg_id = str(user_data['id'])
+    
+    # Check or create user
+    user = db.query(User).filter(User.phone_number == tg_id).first()
+    if not user:
+        user = User(phone_number=tg_id, is_authenticated=True)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": tg_id}, expires_delta=access_token_expires
     )
     
     return {"token": access_token, "status": "success"}

@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const api = axios.create({
     baseURL: BASE_URL,
@@ -29,6 +29,7 @@ api.interceptors.response.use(
 
 export const authApi = {
     login: (tg_id: string, code: string) => api.post('/auth/login', { tg_id, code }),
+    loginWebApp: (initData: string) => api.post('/auth/login/webapp', { initData }),
 };
 
 export const filesApi = {
@@ -53,7 +54,12 @@ export const filesApi = {
     getHistory: () => api.get('/files/history/list'),
     getFolders: () => api.get('/files/folders/list'),
     shareFile: (file_id: number) => api.post(`/files/${file_id}/share`),
+    getShareLink: (token: string) => `${BASE_URL}/files/shared/${token}`,
     moveFile: (file_id: number, new_parent_id: number | null) => api.put(`/files/${file_id}/move`, { new_parent_id }),
     getFileInfo: (file_id: number) => api.get(`/files/${file_id}/info`),
     getUploadStatus: (file_id: number) => api.get(`/files/${file_id}/upload-status`),
+    getFolderDownloadLink: (folder_id: number) => {
+        const token = useAuthStore.getState().token;
+        return `${BASE_URL}/files/${folder_id}/download_folder?token=${token}`;
+    },
 };

@@ -29,7 +29,11 @@ export const FileCard = ({ file, onRefresh }: { file: any, onRefresh: () => void
                 }
             }
             if (action === 'download') {
-                window.open(filesApi.getDownloadLink(file.id), '_blank');
+                if (file.is_folder) {
+                    window.open(filesApi.getFolderDownloadLink(file.id), '_blank');
+                } else {
+                    window.open(filesApi.getDownloadLink(file.id), '_blank');
+                }
             }
             if (action === 'rename') {
                 const newName = prompt("Новое имя:", file.name);
@@ -120,7 +124,12 @@ export const FileCard = ({ file, onRefresh }: { file: any, onRefresh: () => void
                     }
                 }}
                 onDoubleClick={() => {
-                    if (file.is_folder) setCurrentFolder(file.id);
+                    if (file.is_folder) {
+                        setCurrentFolder(file.id);
+                    } else {
+                        // Preview file
+                        openModal('preview', file);
+                    }
                 }}
                 draggable
                 onDragStart={(e: any) => {

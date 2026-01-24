@@ -31,3 +31,9 @@ body {
 #root {
   width: 100%;
 }
+
+@layer utilities {
+  .grid-cols-auto-fit-150 {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+}
