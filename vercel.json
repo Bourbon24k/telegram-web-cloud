@@ -5,6 +5,10 @@
             "destination": "/backend/main.py"
         },
         {
+            "source": "/s/(.*)",
+            "destination": "/frontend/index.html"
+        },
+        {
             "source": "/(.*)",
             "destination": "/frontend/index.html"
         }
