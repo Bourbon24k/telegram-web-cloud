@@ -61,9 +61,23 @@ export const UploadManager = () => {
     }, []);
 
     useEffect(() => {
-        const handler = async (e: CustomEvent<File[]>) => {
-            const files = e.detail;
+        const handler = async (e: CustomEvent<{ files: File[], targetFolderId?: number | null }>) => {
+            // Support both old format (array of files) and new format (object)
+            let files: File[];
+            let targetFolderId: number | null | undefined;
+
+            if (Array.isArray(e.detail)) {
+                files = e.detail;
+                targetFolderId = undefined;
+            } else {
+                files = e.detail.files;
+                targetFolderId = e.detail.targetFolderId;
+            }
+
             const currentFolderId = useFileStore.getState().currentFolderId;
+            // Default parent for this batch is targetFolderId (if dropped on folder) or currentFolderId
+            const batchParentId = targetFolderId !== undefined ? targetFolderId : currentFolderId;
+
             let folderMap: Record<string, number> = {};
 
             // Identify paths to create
@@ -80,7 +94,7 @@ export const UploadManager = () => {
 
             if (pathsToCreate.size > 0) {
                 try {
-                    const { data } = await filesApi.createFolderStructure(Array.from(pathsToCreate), currentFolderId);
+                    const { data } = await filesApi.createFolderStructure(Array.from(pathsToCreate), batchParentId);
                     folderMap = data;
                 } catch (err) {
                     console.error("Failed to create folder structure", err);
@@ -88,7 +102,7 @@ export const UploadManager = () => {
             }
 
             const newTasks: UploadTask[] = files.map(f => {
-                let parentId = currentFolderId;
+                let parentId = batchParentId;
 
                 if (f.webkitRelativePath) {
                     const parts = f.webkitRelativePath.split('/');
@@ -114,8 +128,6 @@ export const UploadManager = () => {
 
             // Execute uploads
             for (const task of newTasks) {
-                // We don't await here to allow parallel start, but uploadFile handles concurrency if needed
-                // Actually uploadFile is async, calling it in loop starts them all "conceptually" in parallel
                 uploadFile(task);
             }
         };
@@ -199,10 +211,6 @@ export const UploadManager = () => {
     );
 };
 
-// Move triggerUpload to window event dispatch to avoid export issues or keep it separate
-// For now, removing the direct export if it causes HMR issues, or ignore it.
-// Better: assign to window manually in component, or use a context.
-// Let's just suppress the error by ensuring it's a const export.
-export const triggerUpload = (files: File[]) => {
-    window.dispatchEvent(new CustomEvent('start-upload', { detail: files }));
+export const triggerUpload = (files: File[], targetFolderId?: number | null) => {
+    window.dispatchEvent(new CustomEvent('start-upload', { detail: { files, targetFolderId } }));
 };

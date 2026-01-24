@@ -1,15 +1,17 @@
 
 import React, { useRef } from 'react';
-import { Plus, Cloud, Folder, File, Clock, Upload } from 'lucide-react';
+import { Plus, Cloud, Folder, File, Clock, Upload, X } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { cn } from '../lib/utils';
 import { motion } from 'framer-motion';
 import { filesApi } from '../api/client';
 import { useFileStore } from '../store/fileStore';
 import { triggerUpload } from './UploadManager';
+import { useUIStore } from '../store/uiStore';
 
 export const Sidebar = ({ onRefresh }: { onRefresh: () => void }) => {
     const { currentFolderId, currentView, setCurrentView, setCurrentFolder, setFiles, setHistoryItems } = useFileStore();
+    const { isSidebarOpen, closeSidebar } = useUIStore();
     const folderInputRef = useRef<HTMLInputElement>(null);
 
     const handleCreateFolder = async () => {
@@ -55,7 +57,16 @@ export const Sidebar = ({ onRefresh }: { onRefresh: () => void }) => {
     };
 
     return (
-        <aside className="w-64 bg-[#f0f0f0] dark:bg-dark-bg p-4 flex flex-col gap-6 select-none h-screen sticky top-0">
+        <aside className={cn(
+            "w-64 bg-[#f0f0f0] dark:bg-dark-bg p-4 flex flex-col gap-6 select-none h-screen fixed inset-y-0 left-0 z-50 transition-transform duration-300 md:sticky md:top-0 md:translate-x-0 border-r border-gray-200 dark:border-dark-border",
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}>
+            <button
+                onClick={closeSidebar}
+                className="absolute top-2 right-2 p-2 md:hidden text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white"
+            >
+                <X size={20} />
+            </button>
             {/* Hidden folder input */}
             <input
                 ref={folderInputRef}

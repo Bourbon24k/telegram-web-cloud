@@ -6,6 +6,7 @@ import { useFileStore } from '../store/fileStore';
 import { FileContextMenu } from './FileContextMenu';
 import { motion } from 'framer-motion';
 import { filesApi } from '../api/client';
+import { triggerUpload } from './UploadManager';
 
 const getIcon = (mime: string, isFolder: boolean) => {
     if (isFolder) return <Folder className="text-brand w-16 h-16 drop-shadow-sm" fill="#fc0" stroke="#eda000" />;
@@ -55,6 +56,55 @@ export const FileCard = ({ file, onRefresh }: { file: any, onRefresh: () => void
         }
     };
 
+    const [isDragOver, setIsDragOver] = React.useState(false);
+
+    const handleDragOver = (e: React.DragEvent) => {
+        if (!file.is_folder) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        if (!file.is_folder) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+
+        // Check if internal move or external upload
+        const sourceId = e.dataTransfer.getData('sourceId');
+
+        if (sourceId) {
+            // Internal move
+            if (sourceId === file.id.toString()) return; // Can't move into self
+            try {
+                // Call API with new_parent_id as the ID of this folder (file.id)
+                await filesApi.moveFile(parseInt(sourceId), file.id);
+                onRefresh();
+            } catch (err) {
+                console.error("Move failed", err);
+                alert("Ошибка перемещения");
+            }
+        } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            // External upload
+            triggerUpload(Array.from(e.dataTransfer.files), file.id);
+        }
+    };
+
+    const formatSize = (bytes: number) => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    };
+
     return (
         <FileContextMenu onAction={handleAction}>
             <motion.div
@@ -72,9 +122,21 @@ export const FileCard = ({ file, onRefresh }: { file: any, onRefresh: () => void
                 onDoubleClick={() => {
                     if (file.is_folder) setCurrentFolder(file.id);
                 }}
+                draggable
+                onDragStart={(e: any) => {
+                    // Cast to any to avoid framer-motion type conflict with HTML5 DnD types
+                    if (e.dataTransfer) {
+                        e.dataTransfer.setData('sourceId', file.id.toString());
+                        e.dataTransfer.effectAllowed = 'move';
+                    }
+                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 className={cn(
                     "group relative bg-white dark:bg-dark-surface p-4 rounded-2xl transition-all cursor-pointer flex flex-col items-center gap-3 select-none",
-                    isSelected ? "ring-2 ring-brand shadow-md bg-yellow-50 dark:bg-white/5" : "shadow-sm hover:shadow-float border border-transparent hover:border-gray-100 dark:hover:border-white/5"
+                    isSelected ? "ring-2 ring-brand shadow-md bg-yellow-50 dark:bg-white/5" : "shadow-sm hover:shadow-float border border-transparent hover:border-gray-100 dark:hover:border-white/5",
+                    isDragOver && "ring-2 ring-brand bg-blue-50 dark:bg-blue-500/20 scale-105 z-10"
                 )}
             >
                 {/* Selection Checkbox */}
@@ -96,12 +158,4 @@ export const FileCard = ({ file, onRefresh }: { file: any, onRefresh: () => void
             </motion.div>
         </FileContextMenu>
     );
-};
-
-const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };

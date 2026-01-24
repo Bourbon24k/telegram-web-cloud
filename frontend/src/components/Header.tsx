@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Search, Moon, Sun, LayoutGrid, List as ListIcon, User, ArrowLeft } from 'lucide-react';
+import { Search, Moon, Sun, LayoutGrid, List as ListIcon, User, ArrowLeft, Menu } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useAuthStore } from '../store/authStore';
 import { useFileStore } from '../store/fileStore';
@@ -8,13 +8,20 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { cn } from '../lib/utils';
 
 export const Header = () => {
-    const { isDarkMode, toggleDarkMode, setViewMode, viewMode } = useUIStore();
+    const { isDarkMode, toggleDarkMode, setViewMode, viewMode, toggleSidebar } = useUIStore();
     const { logout, user } = useAuthStore();
     const { searchQuery, setSearchQuery, currentFolderId, setCurrentFolder, currentView } = useFileStore();
 
     return (
         <header className="h-[72px] px-6 flex items-center justify-between sticky top-0 bg-[#f7f7f7] dark:bg-dark-bg z-40">
             <div className="flex items-center gap-4 flex-1 max-w-2xl">
+                {/* Mobile Menu Button */}
+                <button
+                    onClick={toggleSidebar}
+                    className="md:hidden w-10 h-10 bg-white dark:bg-dark-surface rounded-xl shadow-soft flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-brand transition-colors"
+                >
+                    <Menu size={20} />
+                </button>
                 {/* Back button when inside folder */}
                 {currentFolderId !== null && currentView === 'files' && (
                     <button

@@ -9,9 +9,12 @@ interface UIState {
     viewMode: ViewMode;
     sortOption: SortOption;
     isDarkMode: boolean;
+    isSidebarOpen: boolean;
     setViewMode: (mode: ViewMode) => void;
     setSortOption: (option: SortOption) => void;
     toggleDarkMode: () => void;
+    toggleSidebar: () => void;
+    closeSidebar: () => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -20,6 +23,7 @@ export const useUIStore = create<UIState>()(
             viewMode: 'grid',
             sortOption: 'date',
             isDarkMode: false,
+            isSidebarOpen: false,
             setViewMode: (mode) => set({ viewMode: mode }),
             setSortOption: (option) => set({ sortOption: option }),
             toggleDarkMode: () => set((state) => {
@@ -28,6 +32,8 @@ export const useUIStore = create<UIState>()(
                 else document.documentElement.classList.remove('dark');
                 return { isDarkMode: newMode };
             }),
+            toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+            closeSidebar: () => set({ isSidebarOpen: false }),
         }),
         {
             name: 'tg-cloud-ui',

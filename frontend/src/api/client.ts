@@ -2,8 +2,10 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export const api = axios.create({
-    baseURL: 'http://localhost:8000', // Backend URL
+    baseURL: BASE_URL,
 });
 
 // Add interceptor to inject token
@@ -44,7 +46,7 @@ export const filesApi = {
     renameFile: (file_id: number, name: string) => api.put(`/files/${file_id}/rename`, { name }),
     getDownloadLink: (file_id: number) => {
         const token = useAuthStore.getState().token;
-        return `http://localhost:8000/files/${file_id}/download?token=${token}`;
+        return `${BASE_URL}/files/${file_id}/download?token=${token}`;
     },
     // New endpoints
     getRecentFiles: () => api.get('/files/recent/list'),

@@ -8,6 +8,7 @@ import { ShareModal } from './components/ShareModal';
 import { MoveModal } from './components/MoveModal';
 import { PropertiesModal } from './components/PropertiesModal';
 import { HistoryView } from './components/HistoryView';
+import { SelectionBar } from './components/SelectionBar';
 import { useFileStore } from './store/fileStore';
 import { useAuthStore } from './store/authStore';
 import { useUIStore } from './store/uiStore';
@@ -20,7 +21,7 @@ import toast, { Toaster } from 'react-hot-toast';
 function App() {
   const { isAuthenticated, login } = useAuthStore();
   const { files, setFiles, currentFolderId, searchQuery, currentView } = useFileStore();
-  const { isDarkMode } = useUIStore();
+  const { isDarkMode, isSidebarOpen, closeSidebar } = useUIStore();
 
   const [tgId, setTgId] = useState('');
   const [code, setCode] = useState('');
@@ -156,6 +157,13 @@ function App() {
     <div className={cn("min-h-screen flex text-gray-900 dark:text-gray-100 font-sans", isDarkMode ? "dark" : "")}>
       <Toaster position="bottom-right" toastOptions={{ style: { background: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#fff' : '#000' } }} />
       <Sidebar onRefresh={loadFiles} />
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden animate-in fade-in"
+          onClick={closeSidebar}
+        />
+      )}
       <div className="flex-1 flex flex-col bg-[#f7f7f7] dark:bg-dark-bg transition-colors duration-200">
         <Header />
         <main
@@ -170,6 +178,7 @@ function App() {
           {renderContent()}
         </main>
       </div>
+      <SelectionBar onRefresh={loadFiles} />
       <UploadManager />
 
       {/* Modals */}
