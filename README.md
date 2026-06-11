@@ -4,6 +4,7 @@
 
 ---
 
+<a id="english"></a>
 ## English
 
 # 🌌 Yuku Cloud Storage
@@ -101,6 +102,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
+<a id="russian"></a>
 ## Русский
 
 # 🌌 Yuku Cloud Storage
